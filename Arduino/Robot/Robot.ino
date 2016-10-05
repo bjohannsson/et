@@ -57,7 +57,7 @@ char matrix[NODECOUNT][NODECOUNT]={{0,1,0,0,1,0,0,1,0,0,1,0},
                                    {1,0,0,1,0,0,1,0,0,0,1,0},
                                    {1,0,0,0,1,0,0,0,1,1,0,1},
                                    {0,1,0,1,0,1,0,1,0,0,1,0}};
-char ssid[] = "G2_7354";
+char ssid[] = "xflashA316i";
 char password[] = "87654321";
 char ip[] = {192,168,43,70};
 
@@ -70,8 +70,8 @@ long Rssi = 0;
 unsigned long distance = 0;
 
 char nodeID = 0;
-unsigned char movementTime = 0;
-unsigned char tempMovementTime = 0;
+unsigned long movementTime = 0;
+unsigned long tempMovementTime = 0;
 
 uint16_t PacketCounter = 0;
 long RSSI_Value = 0;
@@ -169,7 +169,7 @@ ISR(TIMER1_OVF_vect)
   case MOVEFORWARDTIME:
   case TURNLEFT:
   case TURNRIGHT:
-  case MOVEBACKTIME: if(((millis()/1000) - tempMovementTime) >= movementTime)
+  case MOVEBACKTIME: if((millis() - tempMovementTime) >= movementTime)
                       {
                         stopMotors();  
                         Command = NOCOMMAND; 
@@ -271,22 +271,23 @@ void stopMotors()
   digitalWrite(MOTOR_LEFT_N,LOW);
   digitalWrite(MOTOR_RIGHT_P,LOW);
   digitalWrite(MOTOR_RIGHT_N,LOW);
+  tempMovementTime = 0;
 }
 
 //Move forward for specific time (in seconds)
 void moveForwardForTime(char *data)
 {
   moveForward();
-  movementTime = *data;
-  tempMovementTime = millis()/1000;
+  movementTime = *data*1000;
+  tempMovementTime = millis();
 }
 
 //Move back for specific time (in seconds)
 void moveBackForTime(char *data)
 {
   moveBack();
-  movementTime = *data;
-  tempMovementTime = millis()/1000;
+  movementTime = *data*1000;
+  tempMovementTime = millis();
 }
 
 //Move back
@@ -305,8 +306,8 @@ void turnLeft(char *data)
   digitalWrite(MOTOR_LEFT_N,HIGH);
   digitalWrite(MOTOR_RIGHT_P,LOW);
   digitalWrite(MOTOR_RIGHT_N,LOW);  
-  movementTime = *data;
-  tempMovementTime = millis()/1000;
+  movementTime = *data*1000;
+  tempMovementTime = millis();
 }
 
 //Turn right for specific time (in seconds)
@@ -316,8 +317,8 @@ void turnRight(char *data)
   digitalWrite(MOTOR_LEFT_N,LOW);
   digitalWrite(MOTOR_RIGHT_P,HIGH);
   digitalWrite(MOTOR_RIGHT_N,LOW); 
-  movementTime = *data;
-  tempMovementTime = millis()/1000; 
+  movementTime = *data*1000;
+  tempMovementTime = millis(); 
 }
 
 //Get RSSI from ESP8266
