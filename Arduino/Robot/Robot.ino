@@ -17,9 +17,17 @@
 #define ULTRASONIC_LEFT_TRIGGER   12
 #define ULTRASONIC_RIGHT_TRIGGER   7
 #define ULTRASONIC_FRONT_ECHO   5
-#define ULTRASONIC_LEFT_ECHO   13
+//#define ULTRASONIC_LEFT_ECHO   13
+#define LED 13
 #define ULTRASONIC_RIGHT_ECHO   2
 #define TIMER1COUNT 64286  //50Hz
+#define TIMER2COUNT 255
+
+#define VERYQUICK 30
+#define QUICK 60
+#define MEDIUM  720
+#define LONG  1440
+
 
 //External commands, communicated with another robot (in Adhoc mode) or TCP
 #define NOCOMMAND 0
@@ -33,8 +41,9 @@
 #define DISTANCELEFT 0x08
 #define DISTANCERIGHT 0x09
 #define DISTANCEFRONT 0x0A
-#define GETMGN 0x0D 
+#define GETMGN 0x0D
 #define GETID 0x0F
+#define TARGET_RSSI 0x0B
 
 //Internal commands, communicated with ESP8266
 #define INT_ID 0x01
@@ -54,16 +63,25 @@ char matrix[NODECOUNT][NODECOUNT]={{0,1,0,0,1,0,0,1,0,0,1,0},
                                    {1,0,0,0,0,1,0,1,0,1,0,0},
                                    {0,1,0,0,1,0,1,0,1,0,0,1},
                                    {0,0,1,0,0,1,0,1,0,0,1,0},
-                                   {1,0,0,1,0,0,1,0,0,0,1,0},
+                                   {1,0,0,1,0,0,1,0,0,0,1,1},
                                    {1,0,0,0,1,0,0,0,1,1,0,1},
-                                   {0,1,0,1,0,1,0,1,0,0,1,0}};
-char ssid[] = "xflashA316i";
+                                   {0,1,0,1,0,1,0,1,0,1,1,0}};
+// char ssid[] = "xflashA316i";
+// char password[] = "87654321";
+// char ip[] = {192,168,43,70};
+
+char ssid[] = "G2_7354";
 char password[] = "87654321";
 char ip[] = {192,168,43,70};
 
-//char ssid[] = "group3";
-//char password[] = "adhocddd";
-//char ip[] = {10,42,0,1};
+int rssiTable[2][2] = { {1, -58}, {2, -61} };
+int targetRSSI = 0;
+uint8_t slave = 10;
+uint8_t master = 12;
+bool ledOn = false;
+uint16_t tim2Counter = 0;
+uint16_t ledSpeed = LONG;
+
 
 char Command = 0;
 long Rssi = 0;
@@ -94,18 +112,21 @@ void handleCommands(char src, char dst, char internal, char tcp, char fwd, char 
                             moveForwardForTime(data);
                             break;
 
-      case MOVEBACK: Command = MOVEBACK; 
+      case MOVEBACK: Command = MOVEBACK;
                      moveBack();
                      break;
-                     
-      case MOVEBACKTIME: Command = MOVEBACKTIME; 
-                         moveBackForTime(data);
-                         break;
-                         
-      case STOP: Command = STOP; 
+//
+//      case MOVEBACKTIME: Command = MOVEBACKTIME;
+//                         moveBackForTime(data);
+//                         break;
+      case MOVEBACKTIME: targetRSSI = (data[0]<<24) | (data[1]<<16) | (data[2]<<8) | (data[3]);
+                        setLedSpeed(QUICK);
+                        break;
+
+      case STOP: Command = STOP;
                  stopMotors();
                  break;
-                
+
       case TURNLEFT: Command = TURNLEFT;
                      turnLeft(data);
                      break;
@@ -125,16 +146,16 @@ void handleCommands(char src, char dst, char internal, char tcp, char fwd, char 
                           sendPacket(dst, src, internal, tcp, ACK, counterH, counterL, 2, tempData);
                           break;
 
-      case DISTANCELEFT: distance = getDistanceLeft();
-                         if(distance > 254)
-                         {
-                          distance = 254;
-                         }
-                         tempData[0] = command;
-                         tempData[1] = distance & 0xFF;
-                         tempData[2] = 0;
-                         sendPacket(dst, src, internal, tcp, ACK, counterH, counterL, 2, tempData);
-                         break;
+//      case DISTANCELEFT: distance = getDistanceLeft();
+//                         if(distance > 254)
+//                         {
+//                          distance = 254;
+//                         }
+//                         tempData[0] = command;
+//                         tempData[1] = distance & 0xFF;
+//                         tempData[2] = 0;
+//                         sendPacket(dst, src, internal, tcp, ACK, counterH, counterL, 2, tempData);
+//                         break;
 
       case DISTANCERIGHT: distance = getDistanceRight();
                           if(distance > 254)
@@ -146,21 +167,24 @@ void handleCommands(char src, char dst, char internal, char tcp, char fwd, char 
                           tempData[2] = 0;
                           sendPacket(dst, src, internal, tcp, ACK, counterH, counterL, 2, tempData);
                           break;
-                           
-      case GETMGN: break;   
+
+      case GETMGN: break;
 
       case GETID: nodeID = getID();
                   tempData[0] = command;
                   tempData[1] = nodeID;
                   sendPacket(dst, src, internal, tcp, ACK, counterH, counterL, 2, tempData);
-                  break; 
+                  break;
+      case TARGET_RSSI: targetRSSI = (data[0]<<24) | (data[1]<<16) | (data[2]<<8) | (data[3]);
+                        setLedSpeed(QUICK);
+                        break;
     }
   }
 
 //Timer 1 interrupt service routine
 ISR(TIMER1_OVF_vect)
 {
- 
+
  long time = millis();
 
  switch(Command)
@@ -171,8 +195,8 @@ ISR(TIMER1_OVF_vect)
   case TURNRIGHT:
   case MOVEBACKTIME: if((millis() - tempMovementTime) >= movementTime)
                       {
-                        stopMotors();  
-                        Command = NOCOMMAND; 
+                        stopMotors();
+                        Command = NOCOMMAND;
                       }
                      break;
  }
@@ -180,19 +204,39 @@ ISR(TIMER1_OVF_vect)
  TCNT1 = TIMER1COUNT;
 }
 
+ISR(TIMER2_OVF_vect)
+{
+  tim2Counter++;
+  if (tim2Counter == ledSpeed) {
+    if (ledOn) {
+      digitalWrite(LED, LOW);
+      ledOn = false;
+    }
+    else {
+      digitalWrite(LED, HIGH);
+      ledOn = true;
+    }
+    tim2Counter = 0;
+  }
+  
+ TCNT2 = TIMER2COUNT;
+}
+
 void initGPIO()
 {
  pinMode(ULTRASONIC_FRONT_TRIGGER, OUTPUT);
- pinMode(ULTRASONIC_LEFT_TRIGGER, OUTPUT);
+// pinMode(ULTRASONIC_LEFT_TRIGGER, OUTPUT);
  pinMode(ULTRASONIC_RIGHT_TRIGGER, OUTPUT);
  pinMode(ULTRASONIC_FRONT_ECHO, INPUT);
- pinMode(ULTRASONIC_LEFT_ECHO, INPUT);
+// pinMode(ULTRASONIC_LEFT_ECHO, INPUT);
  pinMode(ULTRASONIC_RIGHT_ECHO, INPUT);
 
  pinMode(MOTOR_RIGHT_P, OUTPUT);
  pinMode(MOTOR_RIGHT_N, OUTPUT);
  pinMode(MOTOR_LEFT_P, OUTPUT);
- pinMode(MOTOR_LEFT_N, OUTPUT); 
+ pinMode(MOTOR_LEFT_N, OUTPUT);
+
+ pinMode(LED, OUTPUT);
 
  stopMotors();
 }
@@ -200,55 +244,62 @@ void initGPIO()
 
 void initTimer()
 {
-  noInterrupts();   
+  noInterrupts();
   TCCR1A = 0;
   TCCR1B = 0;
 
   TCNT1 = TIMER1COUNT;
   TCCR1B |= (1 << CS12);
   TIMSK1 |= (1 << TOIE1);
+
+//  TCCR2A = 0;
+//  TCCR2B = 0;
+  TCCR2A |= (1 << CS12)|(1 << CS10);
+  TCNT2 = TIMER2COUNT;
+  TCCR2B |= (1 << CS12);
+  TIMSK2 |= (1 << TOIE1);
   interrupts();
 }
 
 //Get distance in cm from front ultrasonic sensor (In blocking mode)
 unsigned long getDistanceFront()
 {
- digitalWrite(ULTRASONIC_FRONT_TRIGGER, LOW); 
- delayMicroseconds(2); 
+ digitalWrite(ULTRASONIC_FRONT_TRIGGER, LOW);
+ delayMicroseconds(2);
 
  digitalWrite(ULTRASONIC_FRONT_TRIGGER, HIGH);
- delayMicroseconds(10); 
- 
+ delayMicroseconds(10);
+
  digitalWrite(ULTRASONIC_FRONT_TRIGGER, LOW);
  long duration = pulseIn(ULTRASONIC_FRONT_ECHO, HIGH);
 
  return duration/58.2;
 }
 
-//Get distance from left ultrasonic sensor (In blocking mode)
-unsigned long getDistanceLeft()
-{
- digitalWrite(ULTRASONIC_LEFT_TRIGGER, LOW); 
- delayMicroseconds(2); 
-
- digitalWrite(ULTRASONIC_LEFT_TRIGGER, HIGH);
- delayMicroseconds(10); 
- 
- digitalWrite(ULTRASONIC_LEFT_TRIGGER, LOW);// setID(12);
- long duration = pulseIn(ULTRASONIC_LEFT_ECHO, HIGH);
-
- return duration/58.2;
-}
+////Get distance from left ultrasonic sensor (In blocking mode)
+//unsigned long getDistanceLeft()
+//{
+// digitalWrite(ULTRASONIC_LEFT_TRIGGER, LOW);
+// delayMicroseconds(2);
+//
+// digitalWrite(ULTRASONIC_LEFT_TRIGGER, HIGH);
+// delayMicroseconds(10);
+//
+// digitalWrite(ULTRASONIC_LEFT_TRIGGER, LOW);// setID(12);
+// long duration = pulseIn(ULTRASONIC_LEFT_ECHO, HIGH);
+//
+// return duration/58.2;
+//}
 
 //Get distance from right ultrasonic sensor (In blocking mode)
 unsigned long getDistanceRight()
 {
- digitalWrite(ULTRASONIC_RIGHT_TRIGGER, LOW); 
- delayMicroseconds(2); 
+ digitalWrite(ULTRASONIC_RIGHT_TRIGGER, LOW);
+ delayMicroseconds(2);
 
  digitalWrite(ULTRASONIC_RIGHT_TRIGGER, HIGH);
- delayMicroseconds(10); 
- 
+ delayMicroseconds(10);
+
  digitalWrite(ULTRASONIC_RIGHT_TRIGGER, LOW);
  long duration = pulseIn(ULTRASONIC_RIGHT_ECHO, HIGH);
 
@@ -305,7 +356,7 @@ void turnLeft(char *data)
   digitalWrite(MOTOR_LEFT_P,LOW);
   digitalWrite(MOTOR_LEFT_N,HIGH);
   digitalWrite(MOTOR_RIGHT_P,LOW);
-  digitalWrite(MOTOR_RIGHT_N,LOW);  
+  digitalWrite(MOTOR_RIGHT_N,LOW);
   movementTime = *data*1000;
   tempMovementTime = millis();
 }
@@ -316,13 +367,13 @@ void turnRight(char *data)
   digitalWrite(MOTOR_LEFT_P,LOW);
   digitalWrite(MOTOR_LEFT_N,LOW);
   digitalWrite(MOTOR_RIGHT_P,HIGH);
-  digitalWrite(MOTOR_RIGHT_N,LOW); 
+  digitalWrite(MOTOR_RIGHT_N,LOW);
   movementTime = *data*1000;
-  tempMovementTime = millis(); 
+  tempMovementTime = millis();
 }
 
 //Get RSSI from ESP8266
-/* 
+/*
  * Get RSSI from ESP8266 with internal command INT_RSSI. ^M
  * Once ESP8266 reads its RSSI, it replies to Arduino with ^M
  * internal command "INT_RSSI". Reception of RSSI is handled ^M
@@ -409,7 +460,7 @@ void onPacket(const uint8_t* buffer, size_t size)
   command = buffer[7];
   data = (buffer + 7);
   // Checksum is not calculated. Can be implemented if necessary
-  
+
   //Check if the command is internal, especially get RSSI from ESP8266
   if(internal == INT_RSSI)
   {
@@ -455,8 +506,10 @@ void sendPacket(char src, char dst, char internal, char isTCP, char isACK, char 
  packetSerial.send(packet,7+index);
 }
 
+char testData[5];
+
 //Initial setup
-void setup() 
+void setup()
 {
 //setID(0x0C);
 nodeID = getID();
@@ -473,28 +526,63 @@ sendIP();
 delay(1000);
 sendSSIDandPassword();
 
+testData[0] = 0x04;
+testData[1] = 0xCC;
+testData[2] = 0xCC;
+testData[3] = 0xCC;
+testData[4] = 0xCC;
+
+
+
+}
+
+void setLedSpeed(int16_t newSpeed) {
+  ledSpeed = newSpeed;
+  tim2Counter = 0;
 }
 
 
-
-int rssiTable[2][2] = { {1, -58}, {2, -61} };
-uint8_t slave = 11;
-
 // Master car
-void loop() 
+bool masterTask1 = false;
+bool slaveTask1 = false;
+
+uint32_t startCounter = 0;
+bool isConnected = false;
+
+
+void loop()
 {
-//  for (int i=0; i<5; i++) {
-//    packetSerial.update();
-//    moveForwardForTime(0x01);
-//    getRSSI();
-//    createPacket(nodeID, slave, 0, 5, 0x0000000000 | RSSI_value); // 4 bytes for long (RSSI_value)
-//  }
-  while(1) {
-    packetSerial.update();
+  // Both cars do this each loop
+  packetSerial.update();
+
+  
+  // Ugly stuff to make sure that cars do nothing until they should be connected
+  if (!isConnected) {
+    while (startCounter<800000) {
+      packetSerial.update();
+      startCounter++;
+    }
+    isConnected = true;
+    setLedSpeed(MEDIUM);
   }
 
 
-  
+  // Task for master car only, send a message to slave car
+  if (nodeID == master) {
+    CreatePacket(nodeID, slave, ADHOC, 5, testData); //RSSI_Value); // 4 bytes for long (RSSI_value)
+    packetSerial.update();
+    delay(200);
+    setLedSpeed(VERYQUICK);
+  }
+  // Task for slave car only, update targetRSSI from received packet (not working)
+  else if (nodeID == slave) {
+    if (!slaveTask1) {
+      if (targetRSSI != 0) {
+        setLedSpeed(VERYQUICK);
+        slaveTask1 = true;
+      }
+    }
+  }
 }
 /** USER FUNCTION FOR AD-HOC NETWORKS COURSE. Create function and send over WiFi network
 src -> ID of robot. Send nodeID variable here (This is don't care for TCP packet)
@@ -509,7 +597,7 @@ void CreatePacket(char src, char dst, char isTCP, char dataLength, char *data)
   char counterLow = PacketCounter & 0xFF;
   char counterHigh = (PacketCounter >> 8) & 0xFF;
   sendPacket(src, dst, 0x00, isTCP, FWD, counterHigh, counterLow, dataLength, data);
-  
+
 }
 
 /** USER FUNCTION FOR AD-HOC NETWORKS COURSE. This function is called when a packet is received from TCP or AD-HOC node
@@ -520,8 +608,7 @@ void OnReceive(char src, char dst, char internal, char tcp, char fwd, char count
 
   //Execute commands if the command is from TCP OR if ID is equal to destination (in Ad-hoc mode)
   if(tcp == TCP || ((tcp == ADHOC) && (nodeID == dst)))
-  { 
+  {
       handleCommands(src, dst, internal, tcp, fwd, counterH, counterL, datalen, command, data);
   }
 }
-
