@@ -36,17 +36,18 @@ bool isConnected = false;
 
 void loop()
 {
-//  while(startCounter <= 5000) {
-//    packetSerial.update();
-//    delay(1);
-//    startCounter ++;
-//  }
+//  packetSerial.update();
+  for (int i=0; i<5000; i++) {
+    packetSerial.update();
+    delay(1);
+  }
   
   packetSerial.update();
   
-//  if (nodeID==server){
-//    CreatePacket(nodeID, slave, ADHOC, 3, testData);
-//  }
+  if (nodeID==server){
+    CreatePacket(nodeID, slave, ADHOC, 3, testData);
+    delay(300);
+  }
   if (rData == 12289)
   {
     digitalWrite(LED, HIGH);
