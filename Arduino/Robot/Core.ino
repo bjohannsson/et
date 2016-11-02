@@ -16,19 +16,11 @@ void handleCommands(char src, char dst, char internal, char tcp, char fwd, char 
     switch(command)
     {
       case MOVEFORWARD : Command = MOVEFORWARD;
-//                         toggleLed();
-                         if (nodeID==server){
-                          CreatePacket(nodeID, slave, ADHOC, 3, testData);
-                         }
-                         else {
-                          moveForward();
-
-                         }
+                         moveForward();
                          break;
 
       case MOVEFORWARDTIME: Command = MOVEFORWARDTIME;
                             moveForwardForTime(data);
-
                             break;
 
       case MOVEBACK: Command = MOVEBACK;
@@ -36,17 +28,8 @@ void handleCommands(char src, char dst, char internal, char tcp, char fwd, char 
                      break;
 
       case MOVEBACKTIME: Command = MOVEBACKTIME;
-        Command = MOVEBACK;
-        rData = (*data << 8 ) | (*(data+1));
-//          rData = *data;
-         if (nodeID==server){
-          CreatePacket(nodeID, slave, ADHOC, 2, testData);
-         }
-         else {
-          
-  
-         }
-         break;
+                         moveBackForTime(data);
+                         break;
 
       case STOP: Command = STOP;
                  stopMotors();
@@ -101,19 +84,17 @@ void handleCommands(char src, char dst, char internal, char tcp, char fwd, char 
                   sendPacket(dst, src, internal, tcp, ACK, counterH, counterL, 2, tempData);
                   break;
 
-//      case FORWARD_COMMAND:
-//        Command = FORWARD_COMMAND;
-//        rData = (*data << 8 ) | (*(data+1));
-//         if (nodeID==server){
-//          CreatePacket(nodeID, slave, ADHOC, 2, testData);
-//         }
-//         else {
-//          
-//  
-//         }
-//         break;
+      case FORWARD_COMMAND:
+        Command = FORWARD_COMMAND;
+         if (nodeID==server){
+          CreatePacket(nodeID, slave, ADHOC, 3, testData);
+         }
+         break;
 
-
+      case SEND_VALUE:
+        Command = SEND_VALUE;
+        rData = (*data << 8 ) | (*(data+1)); // received value
+        break;
 
     }
   }

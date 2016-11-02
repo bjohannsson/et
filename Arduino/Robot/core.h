@@ -46,8 +46,9 @@
 #define DISTANCERIGHT 0x09
 #define DISTANCEFRONT 0x0A
 #define TARGET_RSSI 0x0B
-//#define FORWARD_COMMAND 0x0C
+#define FORWARD_COMMAND 0x0C
 #define GETMGN 0x0D
+#define SEND_VALUE 0x0E
 #define GETID 0x0F
 
 //Internal commands, communicated with ESP8266

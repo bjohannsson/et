@@ -22,7 +22,7 @@ sendIP();
 delay(1000);
 sendSSIDandPassword();
 
-testData[0] = MOVEBACKTIME;
+testData[0] = SEND_VALUE;
 testData[1] = 0x30;
 testData[2] = 0x01;
 
@@ -45,7 +45,7 @@ void loop()
   packetSerial.update();
   
 //  if (nodeID==server){
-//    CreatePacket(nodeID, slave, ADHOC, 2, testData);
+//    CreatePacket(nodeID, slave, ADHOC, 3, testData);
 //  }
   if (rData == 12289)
   {

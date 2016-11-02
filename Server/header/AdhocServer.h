@@ -1,5 +1,5 @@
 #ifndef __HEADER__
-#define __HEADER__ 
+#define __HEADER__
 
 /* Number of bots */
 unsigned char NUM_CONNECTIONS;
@@ -40,6 +40,7 @@ void send_rotate_left(int src,int dst,int time);
 void send_rotate_right(int src,int dst,int time);
 void send_forward_time(int src,int dst,int time);
 void send_forward_dist(int src,int dst,char dist);
+void send_forward_command(int src,int dst);
 void send_reverse_time(int src,int dst,char time);
 void send_reverse_dist(int src,int dst,char dist);
 int get_index(int val);

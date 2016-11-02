@@ -12,10 +12,10 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>    
+#include <string.h>
 #include <sys/socket.h>
-#include <arpa/inet.h> 
-#include <unistd.h>   
+#include <arpa/inet.h>
+#include <unistd.h>
 #include "AdhocServer.h"
 #include "CommandList.h"
 
@@ -28,7 +28,7 @@ int main(int argc , char *argv[])
 {
     int socket_desc , c , read_size;
     struct sockaddr_in server , client;
-    int cmd_val= 0; 
+    int cmd_val= 0;
     int val;
     int  ret = 0;
     int i = 0;
@@ -102,26 +102,27 @@ int main(int argc , char *argv[])
 
         printf("Enter Bot ID to send the packet\n");
         scanf("%d",&dst_id);
-    
+
         printf("Enter the command(1-12) to the bot-%d : \n",dst_id);
 
 
-        printf("  1. Move forward \n"); 
-        printf("  2. Move forward for time in seconds \n"); 
-        printf("  3. Move reverse \n"); 
-        printf("  4. Move reverse for time in seconds \n"); 
-        printf("  5. Move left time\n"); 
-        printf("  6. Move right time\n"); 
-        printf("  7. Stop the bot\n"); 
-        printf("  8. Get obstacle distance left \n"); 
-        printf("  9. Get obstacle distance right\n"); 
-        printf(" 10. Get obstacle distance front\n"); 
+        printf("  1. Move forward \n");
+        printf("  2. Move forward for time in seconds \n");
+        printf("  3. Move reverse \n");
+        printf("  4. Move reverse for time in seconds \n");
+        printf("  5. Move left time\n");
+        printf("  6. Move right time\n");
+        printf("  7. Stop the bot\n");
+        printf("  8. Get obstacle distance left \n");
+        printf("  9. Get obstacle distance right\n");
+        printf(" 10. Get obstacle distance front\n");
         printf(" 11. Get RSSI value\n");
         printf(" 12. Get ID\n");
         printf(" 13. Execute commands from file (cmd_file.txt)\n");
-        printf(" Waiting for user input : "); 
+        printf(" 14. Forward command\n");
+        printf(" Waiting for user input : ");
 
-        scanf("%d",&cmd_val);        
+        scanf("%d",&cmd_val);
 
         switch(cmd_val) {
 
@@ -153,7 +154,7 @@ int main(int argc , char *argv[])
                 break;
             case 7:
                 printf("Sending command to stop the bot\n");
-                stop_bot(src_id,dst_id);   
+                stop_bot(src_id,dst_id);
                 break;
             case 8:
                 printf("Fetchng left obstacle sensor information  \n");
@@ -177,6 +178,9 @@ int main(int argc , char *argv[])
                 break;
             case 13:
                 read_file();
+                break;
+            case 14:
+                send_forward_command(src_id, dst_id);
                 break;
             default:
                 printf("Unknown command received\n");

@@ -1,16 +1,16 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>    
+#include <string.h>
 #include <sys/socket.h>
-#include <arpa/inet.h> 
-#include <unistd.h>  
-#include "CommandList.h" 
+#include <arpa/inet.h>
+#include <unistd.h>
+#include "CommandList.h"
 #include "AdhocServer.h"
 
 
-/* 
+/*
  * Global variables to keep track of src and
- * dst ID 
+ * dst ID
  */
 
 int bot_num = 0;
@@ -20,8 +20,8 @@ uint16_t counter = 2;
 char *BOT_ID;
 
 
-/* 
- * 
+/*
+ *
  * Function to parse the commands
  * present in file and call
  * appropraite APIs
@@ -115,8 +115,8 @@ void parse_cmd(char command,char *line) {
 }
 
 /* Function to read and
- * parse commands from 
- * file 
+ * parse commands from
+ * file
  */
 
 void read_file() {
@@ -200,11 +200,11 @@ long get_RSSI(int src,int dst) {
     char *value = NULL;
     char data;
     int client_index = get_index(dst_id);
-    
+
     data = GET_RSSI;
     create_packet(src,dst,sizeof(data),&data);
     memset(client_message,'\0',1024);
-    
+
 #ifdef __DEBUG__
     printf("Receving from sockfd - %d\n",client_sock[client_index]);
 #endif
@@ -213,11 +213,11 @@ long get_RSSI(int src,int dst) {
 #ifdef __DEBUG__
     printf("%x %x %x %x\n",value[0],value[1],value[2],value[3]);
 #endif
-    
+
     return (value[0] << 24 ) | (value[1] << 16) | (value[2] << 8) | (value[3]);
 }
 
-/* 
+/*
  * Function used to query the ID
  * of the bot as soon as it
  * connects to the server
@@ -261,7 +261,7 @@ void set_botID(int src,int dst,int botID) {
 }
 
 /* Function used to get magnetometer data from
- * the bot. 
+ * the bot.
  */
 /* Might be required in the future */
 
@@ -274,14 +274,14 @@ int get_mag_data(int src,int dst) {
     data = GET_MAG_DATA;
     create_packet(src,dst,sizeof(data),&data);
     memset(client_message,'\0',1024);
-    
+
     ret = recv(client_sock[client_index] , client_message ,1024, 0);
     value = get_data(client_message);
     return value[1];
 }
 
 /* Function used to get obstacle sensor data from
- * the bot. 
+ * the bot.
  */
 
 int get_obstacle_data(int src,int dst,int sensor_num) {
@@ -306,7 +306,7 @@ int get_obstacle_data(int src,int dst,int sensor_num) {
     memset(client_message,'\0',1024);
     int client_index = get_index(dst_id);
     ret = recv(client_sock[client_index] , client_message ,1024, 0);
-   
+
     value = get_data(client_message);
 #ifdef __DEBUG__
     int i;
@@ -360,9 +360,16 @@ void send_forward_time(int src,int dst,int time) {
 
 }
 
-/* 
+void send_forward_command(int src,int dst) {
+
+  char data = FORWARD_COMMAND;
+  create_packet(src,dst,sizeof(data),&data);
+
+}
+
+/*
  * Function to send forward for a specific distance
- * to the bot 
+ * to the bot
  * Can be useful in future when Hall effect sensor
  * is available on the bot
  */
@@ -382,9 +389,9 @@ void send_forward_dist(int src,int dst,char dist) {
 
 }
 
-/* 
+/*
  * Function to send reverse for a specific distance
- * to the bot 
+ * to the bot
  * Can be useful in future when Hall effect sensor
  * is available on the bot
  */
@@ -405,7 +412,7 @@ void send_reverse_time(int src,int dst,char time) {
 void send_reverse_dist(int src,int dst,char dist) {
 
     if(dist == 0) {
-        char data = MOVE_REVERSE; 
+        char data = MOVE_REVERSE;
         create_packet(src,dst,sizeof(data),&data);
     }
     else {
@@ -427,7 +434,7 @@ int get_index(int val) {
 
     int i = 0;
     for(i = 0 ; i < NUM_CONNECTIONS; i++) {
-        
+
         if(BOT_ID[i] == val)
             return i;
     }
@@ -437,8 +444,8 @@ int get_index(int val) {
 }
 
 
-/* 
- * Function used to create and send the 
+/*
+ * Function used to create and send the
  * packet from the server to the selected bot
  */
 
@@ -448,25 +455,25 @@ void create_packet(int src,int dst, char length,char *data)
     char checksum;
     char *packet;
     int client_index = get_index(dst);
-    
+
     if(client_index == -1) {
 
         printf("Bot number not present in list\n");
         return;
     }
-    
+
     packet=(char*)calloc(10 +length,sizeof(char));
     packet[0]= START_MARKER;
     packet[PACKET_START_BYTE_LOC + 1] = 0xFF;
     packet[PACKET_SRC_DST_LOC + 1] = src << 4 | dst ;
-    packet[PACKET_INTERMEDIATE_SRC_LOC + 1] = src <<4; 
-    packet[PACKET_INTERNAL_CMD_LOC + 1] = 0b000 << 5|0b1 << 4|0b0 << 3|0b000; 
+    packet[PACKET_INTERMEDIATE_SRC_LOC + 1] = src <<4;
+    packet[PACKET_INTERNAL_CMD_LOC + 1] = 0b000 << 5|0b1 << 4|0b0 << 3|0b000;
     /* Forward packet and TCP set */
-    //packet[4] = 0x10; 
+    //packet[4] = 0x10;
     packet[PACKET_COUNTER_HIGH_LOC + 1] = counter << 8;
     packet[PACKET_COUNTER_LOW_LOC + 1] = counter & 0xFF;
     packet[PACKET_DATA_LENGTH_LOC + 1] = length;
-    
+
     counter++;
     //memcpy(packet+7,&data,length);
     for(l=0;l<length;l++)
@@ -484,9 +491,9 @@ void create_packet(int src,int dst, char length,char *data)
     free(packet);
 }
 
-/* 
- * Function used to create and send the 
- * packet only during initialization as ID is not yet known 
+/*
+ * Function used to create and send the
+ * packet only during initialization as ID is not yet known
  *
  */
 
@@ -496,7 +503,7 @@ void create_packet_ID(char length,char *data,int client_index)
     int l,i,j;
     char checksum;
     char *packet;
-    
+
     packet=(char*)calloc(10 +length,sizeof(char));
 
 
@@ -506,7 +513,7 @@ void create_packet_ID(char length,char *data,int client_index)
     packet[PACKET_INTERMEDIATE_SRC_LOC + 1] = 0x00;
     packet[PACKET_INTERNAL_CMD_LOC + 1] = 0b000 << 5|0b1 << 4|0b0 << 3|0b000;
     /* Forward packet and TCP set */
-    //packet[4] = 0x10; 
+    //packet[4] = 0x10;
     packet[PACKET_COUNTER_HIGH_LOC + 1] = counter << 8;
     packet[PACKET_COUNTER_LOW_LOC + 1] = counter & 0xFF;
     packet[PACKET_DATA_LENGTH_LOC + 1] = length;
@@ -521,7 +528,7 @@ void create_packet_ID(char length,char *data,int client_index)
     free(packet);
 }
 
-/* 
+/*
  * A wrapper for write() system call
  * to finally send the packet to bot
  */
@@ -533,7 +540,7 @@ int send_cmd(int client_sock, char *buf,int size) {
     return ret;
 }
 
-/* 
+/*
  * Function prints the packet contents in
  * hex format. Can be used for debugging
  */
@@ -545,5 +552,3 @@ void print_packet(char *buf,int size) {
     }
     printf("\n");
 }
-
-

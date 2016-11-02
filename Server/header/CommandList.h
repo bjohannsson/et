@@ -2,7 +2,7 @@
 #define __GAURD__
 /*
  * internal commands
- * 
+ *
  */
 #define IC_1 0B001
 #define ic_2 0b010
@@ -25,9 +25,9 @@
 
 /* Ultrasonic Sesors */
 
-#define ULTRASONIC_LEFT 1 
-#define ULTRASONIC_RIGHT 2 
-#define ULTRASONIC_FRONT 3 
+#define ULTRASONIC_LEFT 1
+#define ULTRASONIC_RIGHT 2
+#define ULTRASONIC_FRONT 3
 
 
 
@@ -47,7 +47,7 @@
 
 
 /*
- * 
+ *
  * external commands
  */
 
@@ -63,6 +63,7 @@
 #define GET_OBSTACLE_LEFT 0X08
 #define GET_OBSTACLE_RIGHT 0X09
 #define GET_OBSTACLE_FRONT 0X0A
+#define FORWARD_COMMAND 0x0C
 #define GET_MAG_DATA 0x0D
 #define GET_RSSI 0x0E
 #define GET_ID 0x0F
@@ -71,7 +72,7 @@
 
 /*
  * setting packet location
- * 
+ *
  */
 #define START_BYTE_LOCATION 0
 #define SRCDST_LOCATION 1
